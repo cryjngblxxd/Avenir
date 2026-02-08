@@ -1,0 +1,61 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "IntroGui"
+screenGui.IgnoreGuiInset = true
+screenGui.DisplayOrder = 100
+screenGui.Parent = playerGui
+
+local introImage = Instance.new("ImageLabel")
+introImage.Name = "IntroImage"
+introImage.Image = "rbxassetid://131363955778121"
+introImage.Size = UDim2.new(0.25, 0, 0.25, 0)
+introImage.AnchorPoint = Vector2.new(0.5, 0.5)
+introImage.Position = UDim2.new(0.5, 0, 0.5, 0)
+introImage.BackgroundTransparency = 1
+introImage.ImageTransparency = 1
+introImage.ScaleType = Enum.ScaleType.Fit
+introImage.ZIndex = 2
+introImage.Parent = screenGui
+
+local blur = Instance.new("BlurEffect")
+blur.Size = 15
+blur.Parent = game:GetService("Lighting")
+
+local fadeInInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local fadeOutInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+
+local fadeIn = TweenService:Create(introImage, fadeInInfo, {
+	ImageTransparency = 0,
+	Size = UDim2.new(0.35, 0, 0.35, 0)
+})
+
+local blurClear = TweenService:Create(blur, fadeInInfo, {
+	Size = 3
+})
+
+fadeIn:Play()
+blurClear:Play()
+fadeIn.Completed:Wait()
+
+task.wait(2)
+
+local fadeOut = TweenService:Create(introImage, fadeOutInfo, {
+	ImageTransparency = 1,
+	Size = UDim2.new(0.2, 0, 0.2, 0)
+})
+
+local blurOut = TweenService:Create(blur, fadeOutInfo, {
+	Size = 0
+})
+
+fadeOut:Play()
+blurOut:Play()
+fadeOut.Completed:Wait()
+
+task.wait(0.5)
+blur:Destroy()
+screenGui:Destroy()
