@@ -1,0 +1,367 @@
+local AvenirNotifications = {}
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local activeNotifications = {}
+local notificationCount = 0
+
+local BLUE = Color3.fromRGB(0, 150, 255)
+local DARK_BLUE = Color3.fromRGB(0, 100, 200)
+local BLACK = Color3.fromRGB(12, 12, 12)
+local DARK_GRAY = Color3.fromRGB(20, 20, 20)
+local WHITE = Color3.fromRGB(240, 240, 240)
+local LIGHT_GRAY = Color3.fromRGB(140, 140, 140)
+local RED = Color3.fromRGB(255, 60, 60)
+local GREEN = Color3.fromRGB(60, 255, 120)
+local YELLOW = Color3.fromRGB(255, 200, 40)
+
+local TYPE_COLORS = {
+	info = BLUE,
+	success = GREEN,
+	warning = YELLOW,
+	error = RED
+}
+
+local existingGui = PlayerGui:FindFirstChild("AvenirNotifications")
+if existingGui then existingGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AvenirNotifications"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999
+ScreenGui.Parent = PlayerGui
+
+local function updatePositions()
+	local yOffset = 15
+	for _, notif in ipairs(activeNotifications) do
+		if notif and notif.Parent then
+			TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Position = UDim2.new(1, -345, 0, yOffset)
+			}):Play()
+			yOffset = yOffset + 82
+		end
+	end
+end
+
+local function removeNotification(frame)
+	for i, notif in ipairs(activeNotifications) do
+		if notif == frame then
+			table.remove(activeNotifications, i)
+			break
+		end
+	end
+
+	local inner = frame:FindFirstChild("Inner")
+	if inner then
+		TweenService:Create(inner, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 0.5
+		}):Play()
+	end
+
+	TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+		Position = UDim2.new(1, 350, 0, frame.Position.Y.Offset),
+		BackgroundTransparency = 1
+	}):Play()
+
+	task.delay(0.35, function()
+		if frame and frame.Parent then
+			frame:Destroy()
+		end
+		updatePositions()
+	end)
+end
+
+function AvenirNotifications:Notify(options)
+	options = options or {}
+	local title = options.Title or "Avenir"
+	local message = options.Message or ""
+	local duration = options.Duration or 5
+	local notifType = options.Type or "info"
+	local callback = options.Callback or nil
+	local accentColor = TYPE_COLORS[notifType] or BLUE
+
+	notificationCount = notificationCount + 1
+
+	local yOffset = 15
+	for _, notif in ipairs(activeNotifications) do
+		yOffset = yOffset + 82
+	end
+
+	local outerFrame = Instance.new("Frame")
+	outerFrame.Name = "AvenirNotif_" .. notificationCount
+	outerFrame.Size = UDim2.new(0, 330, 0, 70)
+	outerFrame.Position = UDim2.new(1, 350, 0, yOffset)
+	outerFrame.BackgroundColor3 = accentColor
+	outerFrame.BackgroundTransparency = 1
+	outerFrame.BorderSizePixel = 0
+	outerFrame.Parent = ScreenGui
+
+	local outerStroke = Instance.new("UIStroke")
+	outerStroke.Color = accentColor
+	outerStroke.Thickness = 1.5
+	outerStroke.Transparency = 0.2
+	outerStroke.Parent = outerFrame
+
+	local outerCorner = Instance.new("UICorner")
+	outerCorner.CornerRadius = UDim.new(0, 10)
+	outerCorner.Parent = outerFrame
+
+	local inner = Instance.new("Frame")
+	inner.Name = "Inner"
+	inner.Size = UDim2.new(1, -3, 1, -3)
+	inner.Position = UDim2.new(0, 1.5, 0, 1.5)
+	inner.BackgroundColor3 = BLACK
+	inner.BorderSizePixel = 0
+	inner.ClipsDescendants = true
+	inner.Parent = outerFrame
+
+	local innerCorner = Instance.new("UICorner")
+	innerCorner.CornerRadius = UDim.new(0, 9)
+	innerCorner.Parent = inner
+
+	local topGlow = Instance.new("Frame")
+	topGlow.Size = UDim2.new(1, 0, 0, 1)
+	topGlow.Position = UDim2.new(0, 0, 0, 0)
+	topGlow.BackgroundColor3 = accentColor
+	topGlow.BackgroundTransparency = 0.5
+	topGlow.BorderSizePixel = 0
+	topGlow.Parent = inner
+
+	local shimmer = Instance.new("Frame")
+	shimmer.Size = UDim2.new(0.3, 0, 1, 0)
+	shimmer.Position = UDim2.new(-0.3, 0, 0, 0)
+	shimmer.BackgroundTransparency = 0
+	shimmer.BorderSizePixel = 0
+	shimmer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	shimmer.ZIndex = 5
+	shimmer.Parent = inner
+
+	local shimmerGradient = Instance.new("UIGradient")
+	shimmerGradient.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+	shimmerGradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.3, 0.92),
+		NumberSequenceKeypoint.new(0.5, 0.85),
+		NumberSequenceKeypoint.new(0.7, 0.92),
+		NumberSequenceKeypoint.new(1, 1)
+	})
+	shimmerGradient.Parent = shimmer
+
+	local logo = Instance.new("ImageLabel")
+	logo.Name = "Logo"
+	logo.Size = UDim2.new(0, 38, 0, 38)
+	logo.Position = UDim2.new(0, 14, 0.5, 0)
+	logo.AnchorPoint = Vector2.new(0, 0.5)
+	logo.BackgroundTransparency = 1
+	logo.Image = "rbxassetid://95509641476599"
+	logo.ScaleType = Enum.ScaleType.Fit
+	logo.ImageTransparency = 1
+	logo.Parent = inner
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Name = "Title"
+	titleLabel.Size = UDim2.new(1, -110, 0, 20)
+	titleLabel.Position = UDim2.new(0, 62, 0, 13)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = title
+	titleLabel.TextColor3 = accentColor
+	titleLabel.TextSize = 15
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	titleLabel.TextTransparency = 1
+	titleLabel.Parent = inner
+
+	local messageLabel = Instance.new("TextLabel")
+	messageLabel.Name = "Message"
+	messageLabel.Size = UDim2.new(1, -110, 0, 18)
+	messageLabel.Position = UDim2.new(0, 62, 0, 35)
+	messageLabel.BackgroundTransparency = 1
+	messageLabel.Text = message
+	messageLabel.TextColor3 = LIGHT_GRAY
+	messageLabel.TextSize = 13
+	messageLabel.Font = Enum.Font.Gotham
+	messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+	messageLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	messageLabel.TextTransparency = 1
+	messageLabel.Parent = inner
+
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Name = "Close"
+	closeBtn.Size = UDim2.new(0, 28, 0, 28)
+	closeBtn.Position = UDim2.new(1, -38, 0.5, 0)
+	closeBtn.AnchorPoint = Vector2.new(0, 0.5)
+	closeBtn.BackgroundTransparency = 1
+	closeBtn.Text = ""
+	closeBtn.AutoButtonColor = false
+	closeBtn.Parent = inner
+
+	local xLine1 = Instance.new("Frame")
+	xLine1.Size = UDim2.new(0, 14, 0, 1.5)
+	xLine1.Position = UDim2.new(0.5, 0, 0.5, 0)
+	xLine1.AnchorPoint = Vector2.new(0.5, 0.5)
+	xLine1.Rotation = 45
+	xLine1.BackgroundColor3 = LIGHT_GRAY
+	xLine1.BorderSizePixel = 0
+	xLine1.Parent = closeBtn
+
+	local x1Corner = Instance.new("UICorner")
+	x1Corner.CornerRadius = UDim.new(0, 2)
+	x1Corner.Parent = xLine1
+
+	local xLine2 = Instance.new("Frame")
+	xLine2.Size = UDim2.new(0, 14, 0, 1.5)
+	xLine2.Position = UDim2.new(0.5, 0, 0.5, 0)
+	xLine2.AnchorPoint = Vector2.new(0.5, 0.5)
+	xLine2.Rotation = -45
+	xLine2.BackgroundColor3 = LIGHT_GRAY
+	xLine2.BorderSizePixel = 0
+	xLine2.Parent = closeBtn
+
+	local x2Corner = Instance.new("UICorner")
+	x2Corner.CornerRadius = UDim.new(0, 2)
+	x2Corner.Parent = xLine2
+
+	local progressBg = Instance.new("Frame")
+	progressBg.Size = UDim2.new(0.85, 0, 0, 2.5)
+	progressBg.Position = UDim2.new(0.075, 0, 1, -8)
+	progressBg.BackgroundColor3 = DARK_GRAY
+	progressBg.BorderSizePixel = 0
+	progressBg.Parent = inner
+
+	local progressBgCorner = Instance.new("UICorner")
+	progressBgCorner.CornerRadius = UDim.new(0, 4)
+	progressBgCorner.Parent = progressBg
+
+	local progressFill = Instance.new("Frame")
+	progressFill.Size = UDim2.new(1, 0, 1, 0)
+	progressFill.BackgroundColor3 = accentColor
+	progressFill.BorderSizePixel = 0
+	progressFill.Parent = progressBg
+
+	local progressFillCorner = Instance.new("UICorner")
+	progressFillCorner.CornerRadius = UDim.new(0, 4)
+	progressFillCorner.Parent = progressFill
+
+	local progressGlow = Instance.new("UIGradient")
+	progressGlow.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, accentColor),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(
+			math.min(accentColor.R * 255 + 50, 255),
+			math.min(accentColor.G * 255 + 50, 255),
+			math.min(accentColor.B * 255 + 50, 255)
+		))
+	})
+	progressGlow.Parent = progressFill
+
+	table.insert(activeNotifications, outerFrame)
+
+	TweenService:Create(outerFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+		Position = UDim2.new(1, -345, 0, yOffset),
+		BackgroundTransparency = 0.85
+	}):Play()
+
+	task.delay(0.1, function()
+		TweenService:Create(logo, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			ImageTransparency = 0
+		}):Play()
+	end)
+
+	task.delay(0.15, function()
+		TweenService:Create(titleLabel, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			TextTransparency = 0
+		}):Play()
+	end)
+
+	task.delay(0.25, function()
+		TweenService:Create(messageLabel, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			TextTransparency = 0
+		}):Play()
+	end)
+
+	task.delay(0.3, function()
+		TweenService:Create(shimmer, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			Position = UDim2.new(1, 0, 0, 0)
+		}):Play()
+		task.delay(0.8, function()
+			if shimmer and shimmer.Parent then
+				shimmer:Destroy()
+			end
+		end)
+	end)
+
+	TweenService:Create(progressFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+		Size = UDim2.new(0, 0, 1, 0)
+	}):Play()
+
+	closeBtn.MouseEnter:Connect(function()
+		TweenService:Create(xLine1, TweenInfo.new(0.15), {BackgroundColor3 = accentColor}):Play()
+		TweenService:Create(xLine2, TweenInfo.new(0.15), {BackgroundColor3 = accentColor}):Play()
+		TweenService:Create(xLine1, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Rotation = 135}):Play()
+		TweenService:Create(xLine2, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Rotation = 45}):Play()
+	end)
+
+	closeBtn.MouseLeave:Connect(function()
+		TweenService:Create(xLine1, TweenInfo.new(0.15), {BackgroundColor3 = LIGHT_GRAY}):Play()
+		TweenService:Create(xLine2, TweenInfo.new(0.15), {BackgroundColor3 = LIGHT_GRAY}):Play()
+		TweenService:Create(xLine1, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Rotation = 45}):Play()
+		TweenService:Create(xLine2, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Rotation = -45}):Play()
+	end)
+
+	closeBtn.MouseButton1Click:Connect(function()
+		TweenService:Create(xLine1, TweenInfo.new(0.1), {Size = UDim2.new(0, 10, 0, 1.5)}):Play()
+		TweenService:Create(xLine2, TweenInfo.new(0.1), {Size = UDim2.new(0, 10, 0, 1.5)}):Play()
+		task.delay(0.1, function()
+			removeNotification(outerFrame)
+		end)
+		if callback then
+			callback()
+		end
+	end)
+
+	outerFrame.MouseEnter:Connect(function()
+		TweenService:Create(outerStroke, TweenInfo.new(0.2), {
+			Color = Color3.fromRGB(
+				math.min(accentColor.R * 255 + 50, 255),
+				math.min(accentColor.G * 255 + 50, 255),
+				math.min(accentColor.B * 255 + 50, 255)
+			),
+			Transparency = 0
+		}):Play()
+		TweenService:Create(outerFrame, TweenInfo.new(0.2), {
+			BackgroundTransparency = 0.75
+		}):Play()
+	end)
+
+	outerFrame.MouseLeave:Connect(function()
+		TweenService:Create(outerStroke, TweenInfo.new(0.2), {
+			Color = accentColor,
+			Transparency = 0.2
+		}):Play()
+		TweenService:Create(outerFrame, TweenInfo.new(0.2), {
+			BackgroundTransparency = 0.85
+		}):Play()
+	end)
+
+	task.delay(duration, function()
+		if outerFrame and outerFrame.Parent then
+			removeNotification(outerFrame)
+		end
+	end)
+
+	return outerFrame
+end
+
+function AvenirNotifications:ClearAll()
+	for _, notif in ipairs(activeNotifications) do
+		if notif and notif.Parent then
+			notif:Destroy()
+		end
+	end
+	activeNotifications = {}
+end
+
+return AvenirNotifications
